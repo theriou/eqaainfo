@@ -1,9 +1,16 @@
 # requires windows version of python
 # use 'winpty' if running from gitbash
 
+import signal
 import msvcrt
 from os import path
 from scapy.all import *
+
+stop = False
+def handle_interrupt(signum, frame):
+    global stop
+    stop = True
+    print("Stopping...", flush=True)
 
 writer = 0
 def packet_callback(packet):
@@ -12,6 +19,8 @@ def packet_callback(packet):
 
 def main(args):
   global writer
+
+  signal.signal(signal.SIGINT, handle_interrupt)
 
   if (len(args) < 2):
     print('Usage: ' + args[0] + ' <output filename>')
@@ -28,6 +37,8 @@ def main(args):
 
     print('Capturing to %s (Ctrl+C to Stop)' % args[1], flush = True)
     writer = PcapWriter(args[1], append=True, sync=False)
-    sniff(filter="udp and (src net 69.174 or dst net 69.174)", timeout=None, prn=packet_callback, store=0)
+
+    while not stop:
+      sniff(filter="udp and (src net 69.174 or dst net 69.174)", timeout=3, prn=packet_callback, store=0)
 
 main(sys.argv)
